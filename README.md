@@ -57,6 +57,10 @@ LLM_API_KEY=your-token
 # continuous: one cycle per closed M15 candle (long-running)
 .venv/bin/python -m bot.scheduler --loop
 
+# on-demand AI trade advisor CLI (any symbol: EURUSD, GBPJPY, USDJPY, XAUUSD, etc.)
+.venv/bin/python advisor.py EURUSD
+.venv/bin/python advisor.py GBPJPY --equity 5000 --risk 1.0
+
 # tests (offline, fast)
 .venv/bin/python -m pytest tests/ -q
 ```
