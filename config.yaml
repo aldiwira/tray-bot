@@ -1,11 +1,7 @@
 # AI Forex Bot config — phase 1 (Yahoo data, dry-run)
 
 llm:
-  # any OpenAI-compatible host (OpenAI, OpenRouter, Ollama, vLLM, LiteLLM, ...)
-  # values here are fallbacks — env vars LLM_BASE_URL / LLM_MODEL win
-  base_url: https://api.openai.com/v1
-  model: gpt-4o-mini
-  # token comes from env LLM_API_KEY (never stored here)
+  # Host, model, and API key are configured in .env (LLM_BASE_URL, LLM_MODEL, LLM_API_KEY)
   temperature: 0.2
   max_tokens: 500
   timeout_s: 60
@@ -16,6 +12,8 @@ symbols:
     yahoo: "EURUSD=X"
   - symbol: GBPUSD
     yahoo: "GBPUSD=X"
+  - symbol: AUDUSD
+    yahoo: "AUDUSD=X"
   - symbol: XAUUSD
     yahoo: "GC=F"        # gold futures proxy; XAUUSD=X exists but is thin on Yahoo
 
@@ -29,6 +27,9 @@ risk:
   risk_pct: 0.75                # percent of equity per trade (clamped 0.25-1.0)
   max_daily_loss_pct: 3.0
   max_risk_pct_allowed: 1.0
+  sl_atr_multiplier: 1.5        # reference SL offset: 1.5x ATR
+  tp_atr_multiplier: 2.5        # reference TP offset: 2.5x ATR
+  min_rr_ratio: 1.0             # minimum reward-to-risk ratio (TP/SL distance)
 
 trading:
   dry_run: true                 # phase 1: always true (no broker wired)

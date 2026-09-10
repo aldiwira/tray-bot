@@ -48,6 +48,9 @@ class RiskConfig(BaseModel):
     risk_pct: float = 0.75
     max_daily_loss_pct: float = 3.0
     max_risk_pct_allowed: float = 1.0
+    sl_atr_multiplier: float = 1.5
+    tp_atr_multiplier: float = 2.5
+    min_rr_ratio: float = 1.0
 
 
 class SessionCfg(BaseModel):

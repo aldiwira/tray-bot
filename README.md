@@ -61,9 +61,10 @@ LLM_API_KEY=your-token
 .venv/bin/python -m pytest tests/ -q
 ```
 
-Config lives in `config.yaml`: LLM endpoint + model (fallbacks; `.env` overrides),
-symbols + Yahoo tickers, risk limits (0.75%/trade, 3% daily loss cap), sessions
-(London/NY UTC hours), journal path.
+Config lives in `config.yaml`: model hyperparameters (`temperature`, `max_tokens`,
+`min_confidence`), symbols + Yahoo tickers, risk limits (0.75%/trade, SL/TP ATR multipliers,
+3% daily loss cap), sessions (London/NY UTC hours), journal path.
+Host, model, and API key live strictly in `.env`.
 
 ## Reading results
 

@@ -1,0 +1,158 @@
+[
+  {
+    "symbol": "EURUSD",
+    "yahoo": "EURUSD=X",
+    "base": "EUR",
+    "quote": "USD",
+    "category": "major",
+    "pip_size": 0.0001,
+    "central_banks": {
+      "base": "European Central Bank (ECB)",
+      "quote": "Federal Reserve (Fed)"
+    },
+    "active_sessions": ["london", "ny"]
+  },
+  {
+    "symbol": "GBPUSD",
+    "yahoo": "GBPUSD=X",
+    "base": "GBP",
+    "quote": "USD",
+    "category": "major",
+    "pip_size": 0.0001,
+    "central_banks": {
+      "base": "Bank of England (BoE)",
+      "quote": "Federal Reserve (Fed)"
+    },
+    "active_sessions": ["london", "ny"]
+  },
+  {
+    "symbol": "USDJPY",
+    "yahoo": "USDJPY=X",
+    "base": "USD",
+    "quote": "JPY",
+    "category": "major",
+    "pip_size": 0.01,
+    "central_banks": {
+      "base": "Federal Reserve (Fed)",
+      "quote": "Bank of Japan (BoJ)"
+    },
+    "active_sessions": ["tokyo", "ny"]
+  },
+  {
+    "symbol": "USDCHF",
+    "yahoo": "USDCHF=X",
+    "base": "USD",
+    "quote": "CHF",
+    "category": "major",
+    "pip_size": 0.0001,
+    "central_banks": {
+      "base": "Federal Reserve (Fed)",
+      "quote": "Swiss National Bank (SNB)"
+    },
+    "active_sessions": ["london", "ny"]
+  },
+  {
+    "symbol": "AUDUSD",
+    "yahoo": "AUDUSD=X",
+    "base": "AUD",
+    "quote": "USD",
+    "category": "major",
+    "pip_size": 0.0001,
+    "central_banks": {
+      "base": "Reserve Bank of Australia (RBA)",
+      "quote": "Federal Reserve (Fed)"
+    },
+    "active_sessions": ["sydney", "tokyo", "ny"]
+  },
+  {
+    "symbol": "USDCAD",
+    "yahoo": "USDCAD=X",
+    "base": "USD",
+    "quote": "CAD",
+    "category": "major",
+    "pip_size": 0.0001,
+    "central_banks": {
+      "base": "Federal Reserve (Fed)",
+      "quote": "Bank of Canada (BoC)"
+    },
+    "active_sessions": ["ny"]
+  },
+  {
+    "symbol": "NZDUSD",
+    "yahoo": "NZDUSD=X",
+    "base": "NZD",
+    "quote": "USD",
+    "category": "major",
+    "pip_size": 0.0001,
+    "central_banks": {
+      "base": "Reserve Bank of New Zealand (RBNZ)",
+      "quote": "Federal Reserve (Fed)"
+    },
+    "active_sessions": ["sydney", "tokyo"]
+  },
+  {
+    "symbol": "EURGBP",
+    "yahoo": "EURGBP=X",
+    "base": "EUR",
+    "quote": "GBP",
+    "category": "cross",
+    "pip_size": 0.0001,
+    "central_banks": {
+      "base": "European Central Bank (ECB)",
+      "quote": "Bank of England (BoE)"
+    },
+    "active_sessions": ["london"]
+  },
+  {
+    "symbol": "EURJPY",
+    "yahoo": "EURJPY=X",
+    "base": "EUR",
+    "quote": "JPY",
+    "category": "cross",
+    "pip_size": 0.01,
+    "central_banks": {
+      "base": "European Central Bank (ECB)",
+      "quote": "Bank of Japan (BoJ)"
+    },
+    "active_sessions": ["london", "tokyo"]
+  },
+  {
+    "symbol": "GBPJPY",
+    "yahoo": "GBPJPY=X",
+    "base": "GBP",
+    "quote": "JPY",
+    "category": "cross",
+    "pip_size": 0.01,
+    "central_banks": {
+      "base": "Bank of England (BoE)",
+      "quote": "Bank of Japan (BoJ)"
+    },
+    "active_sessions": ["london", "tokyo"]
+  },
+  {
+    "symbol": "EURCHF",
+    "yahoo": "EURCHF=X",
+    "base": "EUR",
+    "quote": "CHF",
+    "category": "cross",
+    "pip_size": 0.0001,
+    "central_banks": {
+      "base": "European Central Bank (ECB)",
+      "quote": "Swiss National Bank (SNB)"
+    },
+    "active_sessions": ["london"]
+  },
+  {
+    "symbol": "USDIDR",
+    "yahoo": "USDIDR=X",
+    "base": "USD",
+    "quote": "IDR",
+    "category": "regional",
+    "pip_size": 1.0,
+    "central_banks": {
+      "base": "Federal Reserve (Fed)",
+      "quote": "Bank Indonesia (BI)"
+    },
+    "active_sessions": ["asia"]
+  }
+]

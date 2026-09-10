@@ -103,7 +103,8 @@ def run_backtest(cfg, symbols: list[str] | None, days: int, limit: int) -> dict:
                 continue
             decision, skip = parse_decision(
                 raw, sc.symbol, snap["last_close"], snap["atr14"], 0.0,
-                cfg.risk.max_risk_pct_allowed, cfg.llm.min_confidence)
+                cfg.risk.max_risk_pct_allowed, cfg.llm.min_confidence,
+                min_rr_ratio=cfg.risk.min_rr_ratio)
             entry = {"symbol": sc.symbol, "ts": str(ts)[:16],
                      "prompt_version": PROMPT_VERSION, "raw_llm": raw,
                      "decision": decision.model_dump(), "skip_reason": skip}

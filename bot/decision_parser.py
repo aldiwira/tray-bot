@@ -50,7 +50,8 @@ def extract_json(text: str) -> dict | None:
 def parse_decision(raw_text: str, symbol: str, last_price: float,
                    atr: float, spread: float,
                    max_risk_pct: float = 1.0,
-                   min_confidence: float = 0.55) -> tuple[Decision, str]:
+                   min_confidence: float = 0.55,
+                   min_rr_ratio: float = 1.0) -> tuple[Decision, str]:
     """Returns (decision, skip_reason). skip_reason '' means actionable."""
     obj = extract_json(raw_text)
     if obj is None:
@@ -84,7 +85,7 @@ def parse_decision(raw_text: str, symbol: str, last_price: float,
 
     sl_dist = abs(last_price - d.sl_price)
     tp_dist = abs(d.tp_price - last_price)
-    if tp_dist < sl_dist:
+    if tp_dist < (min_rr_ratio * sl_dist):
         return d, "tp_smaller_than_sl"
     if sl_dist < 1.5 * max(spread, atr * 0.1):
         return d, "sl_too_tight"

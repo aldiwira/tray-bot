@@ -52,15 +52,26 @@ def run_cycle(cfg, symbols: list[str] | None = None) -> int:
             raw, sc.symbol, snapshot["last_close"], snapshot["atr14"],
             spread=snapshot["spread"] or 0.0,
             max_risk_pct=cfg.risk.max_risk_pct_allowed,
-            min_confidence=cfg.llm.min_confidence)
+            min_confidence=cfg.llm.min_confidence,
+            min_rr_ratio=cfg.risk.min_rr_ratio)
 
         lot = 0.0
-        if skip == "" and decision.action in ("BUY", "SELL"):
-            lot = compute_lot(cfg.risk.equity_simulated, decision.risk_pct,
-                              abs(snapshot["last_close"] - decision.sl_price))
+        rr_str = ""
+        if skip == "" and decision.action in ("BUY", "SELL") and decision.sl_price and decision.tp_price:
+            sl_dist = abs(snapshot["last_close"] - decision.sl_price)
+            tp_dist = abs(decision.tp_price - snapshot["last_close"])
+            rr = (tp_dist / sl_dist) if sl_dist > 0 else 0.0
+            rr_str = f" SL={decision.sl_price} TP={decision.tp_price} (R:R {rr:.1f})"
+            lot = compute_lot(cfg.risk.equity_simulated, decision.risk_pct, sl_dist)
 
-        status = (f"[{sc.symbol}] {decision.action} conf={decision.confidence:.2f}"
-                  f" lot={lot} skip={skip or '-'} reason={decision.reason[:60]}")
+        if decision.action in ("BUY", "SELL") and decision.sl_price and decision.tp_price:
+            status = (f"[{sc.symbol}] {decision.action} @ {snapshot['last_close']}{rr_str}"
+                      f" lot={lot} conf={decision.confidence:.2f} skip={skip or '-'}"
+                      f" reason={decision.reason[:60]}")
+        else:
+            status = (f"[{sc.symbol}] {decision.action} @ {snapshot['last_close']}"
+                      f" conf={decision.confidence:.2f} skip={skip or '-'}"
+                      f" reason={decision.reason[:60]}")
         print(status)
 
         append_entry(cfg.journal.path, {

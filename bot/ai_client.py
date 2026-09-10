@@ -15,7 +15,7 @@ from .prompt import SYSTEM_PROMPT
 log = logging.getLogger(__name__)
 
 
-def build_snapshot_prompt(snapshot: dict) -> str:
+def build_snapshot_prompt(snapshot: dict, sl_mult: float = 1.5, tp_mult: float = 2.5) -> str:
     """Render the market snapshot dict as compact text for the LLM."""
     lines = [f"Symbol: {snapshot['symbol']}",
              f"Time (UTC): {snapshot['time_utc']}",
@@ -36,6 +36,8 @@ def build_snapshot_prompt(snapshot: dict) -> str:
     lines.append(f"RSI(14): {rsi14}")
     lines.append(f"ATR(14): {snapshot['atr14']}")
     lines.append(f"20-bar Range: {snapshot['low20']} to {snapshot['high20']} (Price at {range_pct}% of range)")
+    atr_val = snapshot["atr14"]
+    lines.append(f"Suggested SL offset ({sl_mult}x ATR): {round(sl_mult * atr_val, 5)}, TP offset ({tp_mult}x ATR): {round(tp_mult * atr_val, 5)}")
     lines.append(f"Day open: {snapshot['day_open']}")
     lines.append(f"Session now: {snapshot['session']}")
     pos = snapshot.get("open_position")
@@ -49,11 +51,14 @@ def build_snapshot_prompt(snapshot: dict) -> str:
 
 def get_decision(cfg: Config, snapshot: dict) -> str:
     """Call the LLM, return raw text content. Raises on transport errors."""
+    prompt_text = build_snapshot_prompt(snapshot,
+                                        sl_mult=cfg.risk.sl_atr_multiplier,
+                                        tp_mult=cfg.risk.tp_atr_multiplier)
     payload = {
         "model": cfg.llm.model,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": build_snapshot_prompt(snapshot)},
+            {"role": "user", "content": prompt_text},
         ],
         "temperature": cfg.llm.temperature,
         "max_tokens": cfg.llm.max_tokens,
