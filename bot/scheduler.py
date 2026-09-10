@@ -15,6 +15,7 @@ from .config import load_config
 from .decision_parser import parse_decision
 from .journal import append_entry
 from .market_data import build_snapshot
+from .prompt import PROMPT_VERSION
 from .risk import compute_lot
 
 logging.basicConfig(level=logging.INFO,
@@ -70,6 +71,7 @@ def run_cycle(cfg, symbols: list[str] | None = None) -> int:
             "skip_reason": skip,
             "simulated_lot": lot,
             "dry_run": cfg.trading.dry_run,
+            "prompt_version": PROMPT_VERSION,
         })
         done += 1
     return done

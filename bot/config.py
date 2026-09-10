@@ -23,8 +23,9 @@ def _load_dotenv(path: str | Path = ".env") -> None:
 
 
 class LlmConfig(BaseModel):
-    base_url: str
-    model: str
+    # any OpenAI-compatible host; see .env.example for overrides
+    base_url: str = "https://api.openai.com/v1"
+    model: str = "gpt-4o-mini"
     temperature: float = 0.2
     max_tokens: int = 500
     timeout_s: int = 60
@@ -75,13 +76,20 @@ class Config(BaseModel):
 
     @property
     def api_key(self) -> str:
-        key = os.environ.get("POOLSIDE_API_KEY", "")
+        key = os.environ.get("LLM_API_KEY", "")
         if not key:
-            raise RuntimeError("POOLSIDE_API_KEY env var not set")
+            raise RuntimeError("LLM_API_KEY env var not set (set it in .env or shell)")
         return key
 
 
 def load_config(path: str | Path = "config.yaml") -> Config:
     _load_dotenv()
+    # env overrides: LLM_BASE_URL / LLM_MODEL beat config.yaml
     with open(path) as f:
-        return Config(**yaml.safe_load(f))
+        raw = yaml.safe_load(f)
+    for env_key, field in (("LLM_BASE_URL", "base_url"),
+                           ("LLM_MODEL", "model")):
+        val = os.environ.get(env_key)
+        if val:
+            raw.setdefault("llm", {})[field] = val
+    return Config(**raw)

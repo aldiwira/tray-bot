@@ -1,7 +1,8 @@
-"""OpenAI-compatible LLM client for poolside/laguna (any compatible host works).
+"""OpenAI-compatible LLM client (works with any compatible host: OpenAI,
+OpenRouter, Ollama, vLLM, LiteLLM, ...).
 
-Reads base_url / model from config, token from POOLSIDE_API_KEY env.
-"""
+Reads base_url / model from config, token from LLM_API_KEY env (also loaded
+from .env)."""
 from __future__ import annotations
 
 import logging
@@ -9,31 +10,9 @@ import logging
 import requests
 
 from .config import Config
+from .prompt import SYSTEM_PROMPT
 
 log = logging.getLogger(__name__)
-
-SYSTEM_PROMPT = """You are an intraday forex trading analyst. You receive a market
-snapshot (recent candles summary, ATR, session high/low, open simulated position)
-and must respond with ONLY a JSON object, no prose, no markdown fences:
-
-{"action": "BUY" | "SELL" | "CLOSE" | "NO_TRADE",
- "symbol": "<the symbol you were asked about>",
- "confidence": <0.0-1.0>,
- "sl_price": <number, mandatory unless action is NO_TRADE or CLOSE>,
- "tp_price": <number, mandatory unless action is NO_TRADE or CLOSE>,
- "risk_pct": <0.25-1.0 percent of equity to risk, mandatory unless NO_TRADE/CLOSE>,
- "reason": "<one line rationale>"}
-
-Rules:
-- NO_TRADE is a valid and expected answer most of the time. Only trade when
-  structure, volatility, and session timing align.
-- sl_price must be on the losing side of current price; tp_price on the winning
-  side, with tp distance >= sl distance.
-- Never invent data you were not given.
-
-Example decision:
-{"action": "NO_TRADE", "symbol": "EURUSD", "confidence": 0.8,
- "reason": "price mid-range, no breakout, low conviction"}"""
 
 
 def build_snapshot_prompt(snapshot: dict) -> str:

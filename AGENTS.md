@@ -1,7 +1,7 @@
 # AGENTS.md — AI Forex Trading Bot
 
-Phase-1 dry-run trading bot: Yahoo Finance M15 data → poolside/laguna LLM
-(OpenAI-compatible) decision → strict validation → JSONL journal. No execution
+Phase-1 dry-run trading bot: Yahoo Finance M15 data → any OpenAI-compatible LLM
+(strict JSON decisions) → strict validation → JSONL journal. No execution
 wired yet (phase 2 on Windows/MT5 adds `bot/mt5_provider.py` + `bot/executor.py`).
 Plan doc: `.hermes/plans/2026-09-11_110000-ai-forex-trading-bot.md`.
 
@@ -9,8 +9,10 @@ Plan doc: `.hermes/plans/2026-09-11_110000-ai-forex-trading-bot.md`.
 
 - Python venv at `.venv/` (Python 3.13). Always use `.venv/bin/python`.
 - Install: `.venv/bin/pip install -r requirements.txt pytest`
-- Required env var: `POOLSIDE_API_KEY` (inference.poolside.ai token). Bot refuses
-  to start without it. Never put it in config.yaml.
+- Required env: `LLM_API_KEY`, read from `.env` (see `.env.example`). Optional
+  overrides: `LLM_BASE_URL` / `LLM_MODEL` (env beats config.yaml; defaults are
+  OpenAI-compatible `https://api.openai.com/v1` + `gpt-4o-mini`). Never put keys
+  in config.yaml or commit `.env`.
 
 ## Run & test
 

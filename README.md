@@ -1,10 +1,11 @@
 # AI Forex Trading Bot
 
 Dry-run AI trading bot: market data from Yahoo Finance (M15 candles) is sent to
-**poolside/laguna** (any OpenAI-compatible LLM host works) which returns a strict
-JSON trading decision (BUY / SELL / CLOSE / NO_TRADE + SL/TP). Python validates,
-clamps risk, computes lot size, and journals everything. **No execution yet** —
-phase 1 is signal validation only; phase 2 wires MetaTrader 5 on Windows.
+**any OpenAI-compatible LLM host** (OpenAI, OpenRouter, Ollama, vLLM, LiteLLM, ...)
+which returns a strict JSON trading decision (BUY / SELL / CLOSE / NO_TRADE + SL/TP).
+Python validates, clamps risk, computes lot size, and journals everything. **No
+execution yet** — phase 1 is signal validation only; phase 2 wires MetaTrader 5 on
+Windows.
 
 Design rule: the LLM never touches execution. It proposes; Python disposes.
 
@@ -18,7 +19,7 @@ yahoo_provider ──> snapshot ──> ai_client ──> decision_parser ──
 scheduler.py: one cycle per closed M15 candle per symbol
 ```
 
-- `bot/config.py` — pydantic config from `config.yaml`; `POOLSIDE_API_KEY` from env or `.env`
+- `bot/config.py` — pydantic config from `config.yaml`; LLM settings + API key from env or `.env`
 - `bot/ai_client.py` — OpenAI-compatible client (base_url/token/model in config), 3x retry
 - `bot/market_data.py` — snapshot builder (Yahoo for now; MT5 provider planned)
 - `bot/decision_parser.py` — malformed/unsafe LLM output → NO_TRADE with skip_reason
@@ -32,8 +33,16 @@ scheduler.py: one cycle per closed M15 candle per symbol
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
-# API key — never commit it
-echo 'POOLSIDE_API_KEY=your-key-here' > .env    # or export in shell
+cp .env.example .env   # then fill in your key; see .env.example for provider examples
+```
+
+The LLM host is fully swappable — any OpenAI-compatible endpoint works.
+Set in `.env` (env beats config.yaml):
+
+```
+LLM_BASE_URL=https://api.openai.com/v1          # or openrouter, Ollama, vLLM, ...
+LLM_MODEL=gpt-4o-mini
+LLM_API_KEY=your-token
 ```
 
 ## Commands
@@ -52,9 +61,9 @@ echo 'POOLSIDE_API_KEY=your-key-here' > .env    # or export in shell
 .venv/bin/python -m pytest tests/ -q
 ```
 
-Config lives in `config.yaml`: LLM endpoint (`inference.poolside.ai/v1`,
-`poolside/laguna-s-2.1`), symbols + Yahoo tickers, risk limits (0.75%/trade,
-3% daily loss cap), sessions (London/NY UTC hours), journal path.
+Config lives in `config.yaml`: LLM endpoint + model (fallbacks; `.env` overrides),
+symbols + Yahoo tickers, risk limits (0.75%/trade, 3% daily loss cap), sessions
+(London/NY UTC hours), journal path.
 
 ## Reading results
 
@@ -71,7 +80,7 @@ Full audit (raw LLM text, parsed decision, skip reason, simulated lot) in
 ## Phase plan
 
 - [x] **Phase 1 — Linux, Yahoo data, dry-run** (current)
-  - Yahoo M15 snapshots, laguna decisions, parser/risk/journal, 13 unit tests
+  - Yahoo M15 snapshots, LLM decisions, parser/risk/journal, unit tests
 - [ ] **Phase 1.5 — prompt tuning on collected journal data**
   - Run `--loop` for a few days; tune system prompt against skip_reason stats
   - Add backtest.py: replay historical candles through the same pipeline

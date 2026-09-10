@@ -1,9 +1,11 @@
 # AI Forex Bot config — phase 1 (Yahoo data, dry-run)
 
 llm:
-  base_url: https://inference.poolside.ai/v1
-  model: poolside/laguna-s-2.1
-  # token comes from env POOLSIDE_API_KEY (never stored here)
+  # any OpenAI-compatible host (OpenAI, OpenRouter, Ollama, vLLM, LiteLLM, ...)
+  # values here are fallbacks — env vars LLM_BASE_URL / LLM_MODEL win
+  base_url: https://api.openai.com/v1
+  model: gpt-4o-mini
+  # token comes from env LLM_API_KEY (never stored here)
   temperature: 0.2
   max_tokens: 500
   timeout_s: 60
