@@ -1,0 +1,7 @@
+pydantic
+pyyaml
+requests
+yfinance
+pandas
+# phase 2 (Windows only):
+# MetaTrader5

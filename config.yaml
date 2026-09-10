@@ -1,0 +1,39 @@
+# AI Forex Bot config — phase 1 (Yahoo data, dry-run)
+
+llm:
+  base_url: https://inference.poolside.ai/v1
+  model: poolside/laguna-s-2.1
+  # token comes from env POOLSIDE_API_KEY (never stored here)
+  temperature: 0.2
+  max_tokens: 500
+  timeout_s: 60
+  min_confidence: 0.55
+
+symbols:
+  - symbol: EURUSD
+    yahoo: "EURUSD=X"
+  - symbol: GBPUSD
+    yahoo: "GBPUSD=X"
+  - symbol: XAUUSD
+    yahoo: "GC=F"        # gold futures proxy; XAUUSD=X exists but is thin on Yahoo
+
+data:
+  provider: yahoo
+  interval: 15m
+  bars: 100
+
+risk:
+  equity_simulated: 10000.0     # phase 1: simulated account for lot math
+  risk_pct: 0.75                # percent of equity per trade (clamped 0.25-1.0)
+  max_daily_loss_pct: 3.0
+  max_risk_pct_allowed: 1.0
+
+trading:
+  dry_run: true                 # phase 1: always true (no broker wired)
+  one_position_per_symbol: true
+  sessions:                     # UTC hours the bot is allowed to consider trades
+    - {name: london, start: 7, end: 16}
+    - {name: ny, start: 12, end: 21}
+
+journal:
+  path: journal/decisions.jsonl
