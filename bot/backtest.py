@@ -17,7 +17,7 @@ import pandas as pd
 from .ai_client import get_decision
 from .config import load_config
 from .decision_parser import parse_decision
-from .market_data import _session_name
+from .market_data import _session_name, compute_snapshot_metrics
 from .prompt import PROMPT_VERSION
 from .risk import compute_lot
 
@@ -27,28 +27,15 @@ log = logging.getLogger("backtest")
 
 def df_snapshot(symbol: str, tail: pd.DataFrame, now: datetime, sessions) -> dict:
     """Snapshot from an in-memory candle frame (same shape as live provider)."""
-    close = float(tail["Close"].iloc[-1])
-    tr = pd.concat([tail["High"] - tail["Low"],
-                    (tail["High"] - tail["Close"].shift()).abs(),
-                    (tail["Low"] - tail["Close"].shift()).abs()], axis=1).max(axis=1)
-    recent = tail.tail(10).reset_index()
-    recent_rows = [
-        [str(r.iloc[0])[:16], round(float(r["Open"]), 5), round(float(r["High"]), 5),
-         round(float(r["Low"]), 5), round(float(r["Close"]), 5), int(r.get("Volume", 0) or 0)]
-        for _, r in recent.iterrows()
-    ]
+    metrics = compute_snapshot_metrics(tail)
     return {
         "symbol": symbol,
         "time_utc": now.strftime("%Y-%m-%d %H:%M"),
-        "last_close": round(close, 5),
         "spread": None,
-        "atr14": round(float(tr.rolling(14).mean().iloc[-1]), 5),
-        "high20": round(float(tail["High"].tail(20).max()), 5),
-        "low20": round(float(tail["Low"].tail(20).min()), 5),
         "day_open": round(float(tail["Open"].iloc[0]), 5),
-        "recent_candles": recent_rows,
         "open_position": None,
         "session": _session_name(now.hour, sessions),
+        **metrics,
     }
 
 

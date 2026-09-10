@@ -24,15 +24,25 @@ def build_snapshot_prompt(snapshot: dict) -> str:
         lines.append(f"Spread: {snapshot['spread']}")
     else:
         lines.append("Spread: unavailable in this data source")
+
+    # Explicit indicator metrics for the LLM
+    trend_str = snapshot.get("trend", "UNKNOWN")
+    ema20 = snapshot.get("ema20", "-")
+    ema50 = snapshot.get("ema50", "-")
+    rsi14 = snapshot.get("rsi14", "-")
+    range_pct = snapshot.get("range_pos_pct", "-")
+
+    lines.append(f"Trend (EMA20 vs EMA50): {trend_str} (EMA20: {ema20}, EMA50: {ema50})")
+    lines.append(f"RSI(14): {rsi14}")
     lines.append(f"ATR(14): {snapshot['atr14']}")
-    lines.append(f"Session high/low (last 20 bars): {snapshot['high20']} / {snapshot['low20']}")
+    lines.append(f"20-bar Range: {snapshot['low20']} to {snapshot['high20']} (Price at {range_pct}% of range)")
     lines.append(f"Day open: {snapshot['day_open']}")
+    lines.append(f"Session now: {snapshot['session']}")
+    pos = snapshot.get("open_position")
+    lines.append(f"Open position: {pos if pos else 'none'}")
     lines.append("Recent 10 candles (time, O, H, L, C, volume):")
     for row in snapshot["recent_candles"]:
         lines.append("  " + ", ".join(str(x) for x in row))
-    pos = snapshot.get("open_position")
-    lines.append(f"Open position: {pos if pos else 'none'}")
-    lines.append(f"Session now: {snapshot['session']}")
     lines.append(f"Respond with the JSON decision for {snapshot['symbol']} only.")
     return "\n".join(lines)
 

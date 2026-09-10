@@ -18,8 +18,9 @@ def _mk_df(prices):
 
 
 def test_prompt_version_exists():
-    assert PROMPT_VERSION == "v1"
+    assert PROMPT_VERSION == "v2"
     assert "NO_TRADE" in SYSTEM_PROMPT
+    assert "BUY" in SYSTEM_PROMPT and "SELL" in SYSTEM_PROMPT
     # strict JSON contract present
     assert '"action"' in SYSTEM_PROMPT and '"sl_price"' in SYSTEM_PROMPT
 
@@ -32,6 +33,10 @@ def test_df_snapshot_shape():
     assert len(snap["recent_candles"]) == 10
     assert snap["high20"] > snap["low20"]
     assert snap["session"] == "london"
+    assert snap["trend"] in ("BULLISH", "BEARISH", "SIDEWAYS")
+    assert 0 <= snap["rsi14"] <= 100
+    assert 0 <= snap["range_pos_pct"] <= 100
+    assert "ema20" in snap and "ema50" in snap
 
 
 def test_simulate_fill_buy_win():
