@@ -79,11 +79,17 @@ Full audit (raw LLM text, parsed decision, skip reason, simulated lot) in
 
 ## Phase plan
 
-- [x] **Phase 1 — Linux, Yahoo data, dry-run** (current)
+- [x] **Phase 1 — Linux, Yahoo data, dry-run**
   - Yahoo M15 snapshots, LLM decisions, parser/risk/journal, unit tests
-- [ ] **Phase 1.5 — prompt tuning on collected journal data**
-  - Run `--loop` for a few days; tune system prompt against skip_reason stats
-  - Add backtest.py: replay historical candles through the same pipeline
+- [x] **Phase 1.5 — prompt tuning + backtest** (current)
+  - `bot/prompt.py`: versioned prompts (`PROMPT_VERSION`), stamped on every
+    journal entry — treat prompt changes like code changes
+  - `bot/backtest.py`: replay historical candles through the same pipeline with
+    simulated fills (`LLM_API_KEY=*** .venv/bin/python -m bot.backtest --days 5 --limit 20`)
+  - `bot/journal_analyzer.py`: action/skip/confidence stats per prompt version
+    (`.venv/bin/python -m bot.journal_analyzer`)
+  - Ongoing: run `--loop` for a few days, tune the prompt against skip_reason
+    stats, bump `PROMPT_VERSION`, compare win rates via backtest
 - [ ] **Phase 2 — Windows + MT5 execution**
   - `bot/mt5_provider.py` (real spread, account equity) + `bot/executor.py`
     (order_send with SL/TP, position management)
