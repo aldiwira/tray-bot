@@ -110,7 +110,8 @@ def run_backtest(cfg, symbols: list[str] | None, days: int, limit: int) -> dict:
                 range_pos_htf=snap.get("range_pos_htf"))
             entry = {"symbol": sc.symbol, "ts": str(ts)[:16],
                      "prompt_version": PROMPT_VERSION, "raw_llm": raw,
-                     "decision": decision.model_dump(), "skip_reason": skip}
+                     "decision": decision.model_dump(), "skip_reason": skip,
+                     "last_close": snap["last_close"], "atr": snap["atr14"]}
             if skip == "" and decision.action in ("BUY", "SELL") and decision.sl_price:
                 rest = window.iloc[idx + 1: idx + 1 + 48]  # max 12h hold
                 if len(rest):
