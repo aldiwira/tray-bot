@@ -67,6 +67,7 @@ class TradingConfig(BaseModel):
     dry_run: bool = True
     one_position_per_symbol: bool = True
     sessions: list[SessionCfg] = Field(default_factory=list)
+    mt5_bridge_url: str = "http://localhost:5001"
 
 
 class JournalConfig(BaseModel):

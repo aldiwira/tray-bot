@@ -1,0 +1,18 @@
+services:
+  mt5-bridge:
+    image: gmag11/metatrader5_vnc:latest
+    container_name: mt5-bridge
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+      - "8080:80"
+    environment:
+      - MT5_ACCOUNT=${MT5_ACCOUNT:-}
+      - MT5_PASSWORD=${MT5_PASSWORD:-}
+      - MT5_SERVER=${MT5_SERVER:-}
+    volumes:
+      - ./bridge.py:/app/bridge.py:ro
+      - mt5-data:/root/.wine/drive_c/ProgramData
+
+volumes:
+  mt5-data:

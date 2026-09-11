@@ -13,8 +13,10 @@ from datetime import datetime, timezone
 from .ai_client import get_decision
 from .config import load_config
 from .decision_parser import parse_decision
+from .executor import execute_decision
 from .journal import append_entry
 from .market_data import build_snapshot
+from .mt5_provider import build_mt5_snapshot
 from .prompt import PROMPT_VERSION
 from .risk import compute_lot
 
@@ -29,7 +31,10 @@ def run_cycle(cfg, symbols: list[str] | None = None) -> int:
     for sc in cfg.symbols:
         if symbols and sc.symbol not in symbols:
             continue
-        snapshot = build_snapshot(sc.symbol, sc.yahoo, cfg)
+        if cfg.data.provider == "mt5":
+            snapshot = build_mt5_snapshot(sc.symbol, cfg)
+        else:
+            snapshot = build_snapshot(sc.symbol, sc.yahoo, cfg)
         if snapshot is None:
             log.error("[%s] snapshot failed, skipping", sc.symbol)
             append_entry(cfg.journal.path, {"symbol": sc.symbol,
@@ -79,6 +84,10 @@ def run_cycle(cfg, symbols: list[str] | None = None) -> int:
                       f" reason={decision.reason[:60]}")
         print(status)
 
+        exec_res = None
+        if skip == "" and decision.action in ("BUY", "SELL", "CLOSE"):
+            exec_res = execute_decision(decision, snapshot, lot, cfg)
+
         append_entry(cfg.journal.path, {
             "symbol": sc.symbol,
             "last_close": snapshot["last_close"],
@@ -86,6 +95,7 @@ def run_cycle(cfg, symbols: list[str] | None = None) -> int:
             "decision": decision.model_dump(),
             "skip_reason": skip,
             "simulated_lot": lot,
+            "execution": exec_res.__dict__ if exec_res else None,
             "dry_run": cfg.trading.dry_run,
             "prompt_version": PROMPT_VERSION,
         })
@@ -99,18 +109,26 @@ def next_candle_sleep(interval_sec: int = 900) -> float:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="AI forex bot — phase 1 dry-run")
+    ap = argparse.ArgumentParser(description="AI forex bot — phase 1 dry-run & phase 2 MT5")
     ap.add_argument("--once", action="store_true", help="single cycle then exit")
     ap.add_argument("--symbols", nargs="*", help="subset of symbols")
     ap.add_argument("--config", default="config.yaml")
+    ap.add_argument("--provider", choices=["yahoo", "mt5"], default=None,
+                    help="Override data provider (yahoo or mt5)")
+    ap.add_argument("--live", action="store_true",
+                    help="Enable live execution on MT5 (disables dry_run)")
     ap.add_argument("--loop", action="store_true",
                     help="keep running every closed M15 candle")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
-    if not cfg.trading.dry_run:
-        log.error("phase 1 supports dry_run only — refusing to start")
-        sys.exit(1)
+    if args.provider:
+        cfg.data.provider = args.provider
+    if args.live:
+        if cfg.data.provider != "mt5":
+            log.error("Live execution requires MT5 provider — refusing to run live on Yahoo")
+            sys.exit(1)
+        cfg.trading.dry_run = False
 
     log.info("bot start: model=%s base=%s symbols=%s dry_run=%s",
              cfg.llm.model, cfg.llm.base_url,
