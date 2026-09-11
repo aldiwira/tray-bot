@@ -94,6 +94,12 @@ def parse_decision(raw_text: str, symbol: str, last_price: float,
             return d, f"counter_htf_trend_{htf_trend}"
         if d.action == "SELL" and htf_trend != "BEARISH":
             return d, f"counter_htf_trend_{htf_trend}"
+    if range_pos_htf is not None:
+        # Market Structure: Discount (<35%) is for buys, Premium (>65%) is for sells
+        if d.action == "SELL" and range_pos_htf < 35:
+            return d, f"sell_in_discount_zone_{range_pos_htf}"
+        if d.action == "BUY" and range_pos_htf > 65:
+            return d, f"buy_in_premium_zone_{range_pos_htf}"
 
     # Directional trade: enforce SL/TP geometry + clamp risk
     if auto_clamp_sl_tp:

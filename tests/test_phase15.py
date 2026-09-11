@@ -18,7 +18,7 @@ def _mk_df(prices):
 
 
 def test_prompt_version_exists():
-    assert PROMPT_VERSION == "v3"
+    assert PROMPT_VERSION == "v4"
     assert "NO_TRADE" in SYSTEM_PROMPT
     assert "BUY" in SYSTEM_PROMPT and "SELL" in SYSTEM_PROMPT
     # strict JSON contract present

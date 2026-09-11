@@ -165,6 +165,40 @@ def test_parse_htf_alignment_veto_when_flagged():
     assert skip == ""
 
 
+def test_parse_zone_protections():
+    # SELL in Discount Zone (<35%) -> blocked
+    d, skip = parse_decision(
+        '{"action":"SELL","symbol":"EURUSD","confidence":0.8,'
+        '"sl_price":1.0900,"tp_price":1.0790,"risk_pct":0.75}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0001,
+        range_pos_htf=25.0)
+    assert "sell_in_discount_zone" in skip
+
+    # BUY in Premium Zone (>65%) -> blocked
+    d, skip = parse_decision(
+        '{"action":"BUY","symbol":"EURUSD","confidence":0.8,'
+        '"sl_price":1.0800,"tp_price":1.0900,"risk_pct":0.75}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0001,
+        range_pos_htf=78.0)
+    assert "buy_in_premium_zone" in skip
+
+    # SELL in Premium Zone (>65%) -> allowed
+    d, skip = parse_decision(
+        '{"action":"SELL","symbol":"EURUSD","confidence":0.8,'
+        '"sl_price":1.0900,"tp_price":1.0790,"risk_pct":0.75}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0001,
+        range_pos_htf=72.0)
+    assert skip == ""
+
+    # BUY in Discount Zone (<35%) -> allowed
+    d, skip = parse_decision(
+        '{"action":"BUY","symbol":"EURUSD","confidence":0.8,'
+        '"sl_price":1.0800,"tp_price":1.0900,"risk_pct":0.75}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0001,
+        range_pos_htf=28.0)
+    assert skip == ""
+
+
 def test_lot_math():
     # 10000 * 0.75% = 75 USD risk; 50 pip SL -> 75 / (50*10) = 0.15 lot
     assert compute_lot(10000, 0.75, 0.0050) == 0.15
