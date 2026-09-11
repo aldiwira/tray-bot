@@ -21,6 +21,7 @@ from bot.config import load_config
 from bot.decision_parser import parse_decision
 from bot.journal import append_entry
 from bot.market_data import build_snapshot
+from bot.mt5_provider import build_mt5_snapshot, get_mt5_account
 from bot.prompt import PROMPT_VERSION
 from bot.risk import compute_lot
 
@@ -112,6 +113,8 @@ def main() -> None:
     parser.add_argument("--risk", type=float, default=None, help="Risk percentage per trade (default from config)")
     parser.add_argument("--backtest", action="store_true",
                         help="Run a historical backtest for this symbol instead of a live advisory")
+    parser.add_argument("--provider", choices=["yahoo", "mt5"], default=None,
+                        help="Market data provider: 'yahoo' or 'mt5' (default from config)")
     parser.add_argument("--days", type=int, default=5, help="Backtest: days of history to replay (default 5)")
     parser.add_argument("--limit", type=int, default=20, help="Backtest: max LLM calls (default 20)")
     args = parser.parse_args()
@@ -122,19 +125,31 @@ def main() -> None:
         cfg.risk.risk_pct = args.risk
 
     symbol_clean = args.symbol.upper().replace("/", "").replace("-", "")
+    provider = args.provider or getattr(cfg.data, "provider", "yahoo")
 
     if args.backtest:
         result = run_backtest(cfg, [symbol_clean], args.days, args.limit)
         sys.exit(0 if result["fills"] else 1)
 
-    yahoo_ticker = resolve_yahoo_ticker(symbol_clean, cfg)
-
-    print(f"Fetching market data for {symbol_clean} ({yahoo_ticker})...")
-    snapshot = build_snapshot(symbol_clean, yahoo_ticker, cfg)
-    if snapshot is None:
-        print(f"Error: Unable to fetch market data for {symbol_clean} via Yahoo ({yahoo_ticker}).", file=sys.stderr)
-        print("Tip: Make sure the ticker exists on Yahoo Finance (e.g. EURUSD=X, GBPJPY=X).", file=sys.stderr)
-        sys.exit(1)
+    if provider == "mt5":
+        bridge_url = getattr(cfg.trading, "mt5_bridge_url", "http://localhost:5001")
+        acc = get_mt5_account(bridge_url)
+        if acc and not args.equity:
+            equity = float(acc.get("equity", equity))
+        print(f"Fetching live market data for {symbol_clean} from MetaTrader 5 ({bridge_url})...")
+        snapshot = build_mt5_snapshot(symbol_clean, cfg)
+        if snapshot is None:
+            print(f"Error: Unable to fetch market data for {symbol_clean} via MT5 bridge ({bridge_url}).", file=sys.stderr)
+            print("Tip: Ensure the MT5 Docker container is running and symbol is in Market Watch.", file=sys.stderr)
+            sys.exit(1)
+    else:
+        yahoo_ticker = resolve_yahoo_ticker(symbol_clean, cfg)
+        print(f"Fetching market data for {symbol_clean} ({yahoo_ticker})...")
+        snapshot = build_snapshot(symbol_clean, yahoo_ticker, cfg)
+        if snapshot is None:
+            print(f"Error: Unable to fetch market data for {symbol_clean} via Yahoo ({yahoo_ticker}).", file=sys.stderr)
+            print("Tip: Make sure the ticker exists on Yahoo Finance (e.g. EURUSD=X, GBPJPY=X).", file=sys.stderr)
+            sys.exit(1)
 
     print(f"Requesting AI analysis from model '{cfg.llm.model}' at {cfg.llm.base_url}...")
     try:
