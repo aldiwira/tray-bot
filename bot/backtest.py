@@ -112,7 +112,8 @@ def run_backtest(cfg, symbols: list[str] | None, days: int, limit: int) -> dict:
                 rsi14=snap.get("rsi14"),
                 range_pos_htf=snap.get("range_pos_htf"),
                 htf_trend=snap.get("htf_trend"),
-                require_htf_alignment=cfg.requires_htf_alignment(sc.symbol))
+                require_htf_alignment=cfg.requires_htf_alignment(sc.symbol),
+                auto_clamp_sl_tp=cfg.risk.auto_clamp_sl_tp)
             entry = {"symbol": sc.symbol, "ts": str(ts)[:16],
                      "prompt_version": PROMPT_VERSION, "raw_llm": raw,
                      "decision": decision.model_dump(), "skip_reason": skip,

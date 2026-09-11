@@ -54,6 +54,7 @@ class RiskConfig(BaseModel):
     sl_atr_multiplier: float = 1.5
     tp_atr_multiplier: float = 2.5
     min_rr_ratio: float = 1.0
+    auto_clamp_sl_tp: bool = True
 
 
 class SessionCfg(BaseModel):

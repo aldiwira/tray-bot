@@ -40,6 +40,7 @@ risk:
   sl_atr_multiplier: 1.5        # reference SL offset: 1.5x ATR
   tp_atr_multiplier: 2.5        # reference TP offset: 2.5x ATR
   min_rr_ratio: 1.0             # minimum reward-to-risk ratio (TP/SL distance)
+  auto_clamp_sl_tp: true        # auto-correct SL/TP pip math to valid ATR geometry
 
 trading:
   dry_run: true                 # phase 1: always true (no broker wired)

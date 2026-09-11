@@ -52,6 +52,25 @@ def test_parse_tp_smaller_than_sl():
         "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0002)
     assert skip == "tp_smaller_than_sl"
 
+def test_parse_auto_clamp_tp_smaller_than_sl():
+    # When auto_clamp_sl_tp=True, bad TP is adjusted instead of skipped
+    d, skip = parse_decision(
+        '{"action":"BUY","symbol":"EURUSD","confidence":0.9,'
+        '"sl_price":1.0800,"tp_price":1.0870,"risk_pct":0.5}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0002,
+        auto_clamp_sl_tp=True)
+    assert skip == ""
+    assert d.tp_price is not None and d.tp_price >= 1.0925
+
+def test_parse_auto_clamp_missing_sl_tp():
+    d, skip = parse_decision(
+        '{"action":"SELL","symbol":"EURUSD","confidence":0.9,"risk_pct":0.5}',
+        "EURUSD", last_price=1.0850, atr=0.0020, spread=0.0001,
+        auto_clamp_sl_tp=True)
+    assert skip == ""
+    assert d.sl_price is not None and d.sl_price > 1.0850
+    assert d.tp_price is not None and d.tp_price < 1.0850
+
 def test_parse_low_confidence():
     d, skip = parse_decision(
         '{"action":"BUY","symbol":"EURUSD","confidence":0.3,'

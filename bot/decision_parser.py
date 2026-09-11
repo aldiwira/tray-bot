@@ -55,7 +55,8 @@ def parse_decision(raw_text: str, symbol: str, last_price: float,
                    rsi14: float | None = None,
                    range_pos_htf: float | None = None,
                    htf_trend: str | None = None,
-                   require_htf_alignment: bool = False) -> tuple[Decision, str]:
+                   require_htf_alignment: bool = False,
+                   auto_clamp_sl_tp: bool = False) -> tuple[Decision, str]:
     """Returns (decision, skip_reason). skip_reason '' means actionable."""
     obj = extract_json(raw_text)
     if obj is None:
@@ -95,21 +96,41 @@ def parse_decision(raw_text: str, symbol: str, last_price: float,
             return d, f"counter_htf_trend_{htf_trend}"
 
     # Directional trade: enforce SL/TP geometry + clamp risk
-    if d.sl_price is None or d.tp_price is None:
-        return d, "missing_sl_or_tp"
-    if d.action == "BUY":
-        if d.sl_price >= last_price or d.tp_price <= last_price:
-            return d, "bad_sl_tp_side"
-    if d.action == "SELL":
-        if d.sl_price <= last_price or d.tp_price >= last_price:
-            return d, "bad_sl_tp_side"
+    if auto_clamp_sl_tp:
+        is_buy = d.action == "BUY"
+        # 1. Clamp / fallback SL
+        if d.sl_price is None or (is_buy and d.sl_price >= last_price) or (not is_buy and d.sl_price <= last_price):
+            d.sl_price = round(last_price - 1.5 * atr if is_buy else last_price + 1.5 * atr, 5)
+        sl_dist = abs(last_price - d.sl_price)
+        min_sl_dist = 1.5 * max(spread, atr * 0.1)
+        if sl_dist < min_sl_dist:
+            sl_dist = round(min_sl_dist, 5)
+            d.sl_price = round(last_price - sl_dist if is_buy else last_price + sl_dist, 5)
 
-    sl_dist = abs(last_price - d.sl_price)
-    tp_dist = abs(d.tp_price - last_price)
-    if tp_dist < (min_rr_ratio * sl_dist):
-        return d, "tp_smaller_than_sl"
-    if sl_dist < 1.5 * max(spread, atr * 0.1):
-        return d, "sl_too_tight"
+        # 2. Clamp / fallback TP
+        min_tp_dist = max(min_rr_ratio * sl_dist, 1.5 * sl_dist)
+        if d.tp_price is None or (is_buy and d.tp_price <= last_price) or (not is_buy and d.tp_price >= last_price):
+            d.tp_price = round(last_price + min_tp_dist if is_buy else last_price - min_tp_dist, 5)
+        else:
+            tp_dist = abs(d.tp_price - last_price)
+            if tp_dist < min_rr_ratio * sl_dist:
+                d.tp_price = round(last_price + min_tp_dist if is_buy else last_price - min_tp_dist, 5)
+    else:
+        if d.sl_price is None or d.tp_price is None:
+            return d, "missing_sl_or_tp"
+        if d.action == "BUY":
+            if d.sl_price >= last_price or d.tp_price <= last_price:
+                return d, "bad_sl_tp_side"
+        if d.action == "SELL":
+            if d.sl_price <= last_price or d.tp_price >= last_price:
+                return d, "bad_sl_tp_side"
+
+        sl_dist = abs(last_price - d.sl_price)
+        tp_dist = abs(d.tp_price - last_price)
+        if tp_dist < (min_rr_ratio * sl_dist):
+            return d, "tp_smaller_than_sl"
+        if sl_dist < 1.5 * max(spread, atr * 0.1):
+            return d, "sl_too_tight"
 
     d.risk_pct = min(max(d.risk_pct or 0.5, 0.1), max_risk_pct)
     return d, ""

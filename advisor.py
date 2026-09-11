@@ -155,7 +155,8 @@ def main() -> None:
         rsi14=snapshot.get("rsi14"),
         range_pos_htf=snapshot.get("range_pos_htf"),
         htf_trend=snapshot.get("htf_trend"),
-        require_htf_alignment=cfg.requires_htf_alignment(symbol_clean)
+        require_htf_alignment=cfg.requires_htf_alignment(symbol_clean),
+        auto_clamp_sl_tp=cfg.risk.auto_clamp_sl_tp
     )
 
     format_advisor_output(symbol_clean, snapshot, raw_llm, decision, skip, equity)
