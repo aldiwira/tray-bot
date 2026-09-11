@@ -26,9 +26,10 @@ logging.basicConfig(level=logging.WARNING)
 log = logging.getLogger("backtest")
 
 
-def df_snapshot(symbol: str, tail: pd.DataFrame, now: datetime, sessions) -> dict:
+def df_snapshot(symbol: str, tail: pd.DataFrame, now: datetime, sessions,
+                recent_bars: int = 100) -> dict:
     """Snapshot from an in-memory candle frame (same shape as live provider)."""
-    metrics = compute_snapshot_metrics(tail)
+    metrics = compute_snapshot_metrics(tail, recent_bars=recent_bars)
     return {
         "symbol": symbol,
         "time_utc": now.strftime("%Y-%m-%d %H:%M"),
@@ -73,7 +74,7 @@ def run_backtest(cfg, symbols: list[str] | None, days: int, limit: int) -> dict:
     for sc in cfg.symbols:
         if symbols and sc.symbol not in symbols:
             continue
-        df = yf.download(sc.yahoo, period=f"{days + 2}d", interval=cfg.data.interval,
+        df = yf.download(sc.yahoo, period=f"{days + 16}d", interval=cfg.data.interval,
                          progress=False, auto_adjust=False)
         if df is None or df.empty:
             log.error("no data for %s", sc.symbol)
@@ -92,11 +93,13 @@ def run_backtest(cfg, symbols: list[str] | None, days: int, limit: int) -> dict:
             positions = positions[:limit]
 
         for i, ts in enumerate(positions):
-            idx = window.index.get_loc(ts)
-            tail = window.iloc[max(0, idx - cfg.data.bars):idx + 1]
-            if len(tail) < cfg.data.bars // 2:
+            idx = int(df.index.get_loc(ts))
+            # Full 14-day history (up to 960 bars) up to ts so HTF metrics match live
+            history = df.iloc[max(0, idx - 960):idx + 1]
+            if len(history) < cfg.data.bars // 2:
                 continue
-            snap = df_snapshot(sc.symbol, tail, ts.to_pydatetime(), sessions)
+            snap = df_snapshot(sc.symbol, history, ts.to_pydatetime(), sessions,
+                               recent_bars=cfg.data.bars)
             try:
                 raw = get_decision(cfg, snap)
             except RuntimeError as e:
@@ -115,7 +118,7 @@ def run_backtest(cfg, symbols: list[str] | None, days: int, limit: int) -> dict:
                      "decision": decision.model_dump(), "skip_reason": skip,
                      "last_close": snap["last_close"], "atr": snap["atr14"]}
             if skip == "" and decision.action in ("BUY", "SELL") and decision.sl_price:
-                rest = window.iloc[idx + 1: idx + 1 + 48]  # max 12h hold
+                rest = df.iloc[idx + 1: idx + 1 + 48]  # max 12h hold
                 if len(rest):
                     fill = simulate_fill(decision, snap["last_close"], rest)
                     lot = compute_lot(cfg.risk.equity_simulated, decision.risk_pct,
