@@ -52,7 +52,10 @@ def format_advisor_output(symbol: str, snapshot: dict, raw_llm: str,
     print("\n[1] MARKET SNAPSHOT & INDICATORS")
     print(f"  Current Price : {last_price}")
     print(f"  Market Session: {snapshot['session'].upper()}")
-    print(f"  Trend         : {snapshot.get('trend', 'N/A')} (EMA20: {snapshot.get('ema20')}, EMA50: {snapshot.get('ema50')})")
+    if snapshot.get("htf_trend") and snapshot.get("htf_trend") != "UNKNOWN":
+        print(f"  HTF Trend (H4): {snapshot['htf_trend']}")
+        print(f"  14-Day Range  : {snapshot.get('low_htf')} - {snapshot.get('high_htf')} (Price at {snapshot.get('range_pos_htf')}% of macro range)")
+    print(f"  M15 Trend     : {snapshot.get('trend', 'N/A')} (EMA20: {snapshot.get('ema20')}, EMA50: {snapshot.get('ema50')})")
     print(f"  RSI(14)       : {snapshot.get('rsi14', 'N/A')}")
     print(f"  ATR(14)       : {atr}")
     print(f"  20-Bar Range  : {snapshot['low20']} - {snapshot['high20']} (Price at {snapshot.get('range_pos_pct')}% of range)")

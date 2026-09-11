@@ -21,6 +21,7 @@ data:
   provider: yahoo
   interval: 15m
   bars: 100
+  period: 14d
 
 risk:
   equity_simulated: 10000.0     # phase 1: simulated account for lot math

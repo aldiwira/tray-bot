@@ -33,6 +33,8 @@ def build_snapshot_prompt(snapshot: dict, sl_mult: float = 1.5, tp_mult: float =
     range_pct = snapshot.get("range_pos_pct", "-")
 
     lines.append(f"Trend (EMA20 vs EMA50): {trend_str} (EMA20: {ema20}, EMA50: {ema50})")
+    if snapshot.get("htf_trend") and snapshot.get("htf_trend") != "UNKNOWN":
+        lines.append(f"Higher Timeframe (H4/14d): Trend is {snapshot['htf_trend']}, 14-day Range {snapshot.get('low_htf')} to {snapshot.get('high_htf')} (Price at {snapshot.get('range_pos_htf')}% of range)")
     lines.append(f"RSI(14): {rsi14}")
     lines.append(f"ATR(14): {snapshot['atr14']}")
     lines.append(f"20-bar Range: {snapshot['low20']} to {snapshot['high20']} (Price at {range_pct}% of range)")

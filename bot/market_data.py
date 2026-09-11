@@ -19,9 +19,11 @@ def _session_name(utc_hour: int, sessions: list[dict]) -> str:
     return "off"
 
 
-def compute_snapshot_metrics(tail: pd.DataFrame) -> dict:
+def compute_snapshot_metrics(tail: pd.DataFrame, recent_bars: int = 100) -> dict:
     """Calculate technical indicators and summary metrics from candles DataFrame."""
-    close = tail["Close"]
+    df = tail
+    m15_tail = df.tail(recent_bars) if len(df) > recent_bars else df
+    close = m15_tail["Close"]
     last_close = float(close.iloc[-1])
 
     # EMA20, EMA50 for trend
@@ -47,22 +49,39 @@ def compute_snapshot_metrics(tail: pd.DataFrame) -> dict:
         rsi14 = 100.0 - (100.0 / (1.0 + rs))
 
     # ATR(14)
-    tr = pd.concat([tail["High"] - tail["Low"],
-                    (tail["High"] - close.shift()).abs(),
-                    (tail["Low"] - close.shift()).abs()], axis=1).max(axis=1)
+    tr = pd.concat([m15_tail["High"] - m15_tail["Low"],
+                    (m15_tail["High"] - close.shift()).abs(),
+                    (m15_tail["Low"] - close.shift()).abs()], axis=1).max(axis=1)
     atr14 = float(tr.rolling(14).mean().iloc[-1])
 
-    high20 = float(tail["High"].tail(20).max())
-    low20 = float(tail["Low"].tail(20).min())
+    high20 = float(m15_tail["High"].tail(20).max())
+    low20 = float(m15_tail["Low"].tail(20).min())
     span = high20 - low20
     range_pos_pct = round(((last_close - low20) / span * 100.0), 1) if span > 0 else 50.0
 
-    recent = tail.tail(10).reset_index()
+    recent = m15_tail.tail(10).reset_index()
     recent_rows = [
         [str(r.iloc[0])[:16], round(float(r["Open"]), 5), round(float(r["High"]), 5),
          round(float(r["Low"]), 5), round(float(r["Close"]), 5), int(r.get("Volume", 0) or 0)]
         for _, r in recent.iterrows()
     ]
+
+    # HTF metrics (14-day / macro context from full df)
+    high_htf = round(float(df["High"].max()), 5)
+    low_htf = round(float(df["Low"].min()), 5)
+    span_htf = high_htf - low_htf
+    range_pos_htf = round(((last_close - low_htf) / span_htf * 100.0), 1) if span_htf > 0 else 50.0
+
+    htf_trend = "UNKNOWN"
+    if len(df) >= 30:
+        h4 = df.resample("4h").agg({"Close": "last"}).dropna()
+        if len(h4) >= 20:
+            h4_e20 = float(h4["Close"].ewm(span=20, adjust=False).mean().iloc[-1])
+            h4_e50 = float(h4["Close"].ewm(span=50, adjust=False).mean().iloc[-1]) if len(h4) >= 50 else None
+            if h4_e50 is not None:
+                htf_trend = "BULLISH" if last_close > h4_e20 > h4_e50 else ("BEARISH" if last_close < h4_e20 < h4_e50 else "SIDEWAYS")
+            else:
+                htf_trend = "BULLISH" if last_close > h4_e20 else "BEARISH"
 
     return {
         "last_close": round(last_close, 5),
@@ -74,6 +93,10 @@ def compute_snapshot_metrics(tail: pd.DataFrame) -> dict:
         "high20": round(high20, 5),
         "low20": round(low20, 5),
         "range_pos_pct": range_pos_pct,
+        "htf_trend": htf_trend,
+        "high_htf": high_htf,
+        "low_htf": low_htf,
+        "range_pos_htf": range_pos_htf,
         "recent_candles": recent_rows,
     }
 
@@ -82,7 +105,8 @@ def build_snapshot(symbol: str, yahoo_ticker: str, cfg) -> dict | None:
     """Fetch bars from Yahoo and build the LLM snapshot dict."""
     import yfinance as yf
 
-    df = yf.download(yahoo_ticker, period="5d", interval=cfg.data.interval,
+    period = getattr(cfg.data, "period", "14d")
+    df = yf.download(yahoo_ticker, period=period, interval=cfg.data.interval,
                      progress=False, auto_adjust=False)
     if df is None or df.empty:
         log.error("no data for %s (%s)", symbol, yahoo_ticker)
@@ -94,8 +118,7 @@ def build_snapshot(symbol: str, yahoo_ticker: str, cfg) -> dict | None:
         log.error("insufficient bars for %s: %d", symbol, len(df))
         return None
 
-    tail = df.tail(cfg.data.bars)
-    metrics = compute_snapshot_metrics(tail)
+    metrics = compute_snapshot_metrics(df, recent_bars=cfg.data.bars)
 
     now = datetime.now(timezone.utc)
     day_df = df[df.index.tz_convert("UTC").date == now.date()] if df.index.tz is not None else df

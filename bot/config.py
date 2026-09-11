@@ -41,6 +41,7 @@ class DataConfig(BaseModel):
     provider: str = "yahoo"
     interval: str = "15m"
     bars: int = 100
+    period: str = "14d"
 
 
 class RiskConfig(BaseModel):
