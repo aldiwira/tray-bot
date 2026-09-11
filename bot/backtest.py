@@ -17,6 +17,7 @@ import pandas as pd
 from .ai_client import get_decision
 from .config import load_config
 from .decision_parser import parse_decision
+from .journal import append_entry
 from .market_data import _session_name, compute_snapshot_metrics
 from .prompt import PROMPT_VERSION
 from .risk import compute_lot
@@ -126,6 +127,7 @@ def run_backtest(cfg, symbols: list[str] | None, days: int, limit: int) -> dict:
                 print(f"[{sc.symbol}] {entry['ts']} {decision.action} "
                       f"conf={decision.confidence:.2f} skip={skip or '-'}")
             results.append(entry)
+            append_entry(cfg.journal.path, entry)
             time.sleep(0.5)  # be gentle with the API
 
     # summary
