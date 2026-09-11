@@ -81,7 +81,7 @@ def get_decision(cfg: Config, snapshot: dict) -> str:
             data = r.json()
             usage = data.get("usage", {})
             content = data["choices"][0]["message"]["content"]
-            log.info("llm call ok: usage=%s", usage)
+            log.debug("llm call ok: usage=%s", usage)
             return content
         except (requests.RequestException, KeyError, ValueError) as e:
             last_err = e
