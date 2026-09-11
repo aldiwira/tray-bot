@@ -55,7 +55,9 @@ def run_cycle(cfg, symbols: list[str] | None = None) -> int:
             min_confidence=cfg.llm.min_confidence,
             min_rr_ratio=cfg.risk.min_rr_ratio,
             rsi14=snapshot.get("rsi14"),
-            range_pos_htf=snapshot.get("range_pos_htf"))
+            range_pos_htf=snapshot.get("range_pos_htf"),
+            htf_trend=snapshot.get("htf_trend"),
+            require_htf_alignment=cfg.requires_htf_alignment(sc.symbol))
 
         lot = 0.0
         rr_str = ""

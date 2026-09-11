@@ -53,7 +53,9 @@ def parse_decision(raw_text: str, symbol: str, last_price: float,
                    min_confidence: float = 0.55,
                    min_rr_ratio: float = 1.0,
                    rsi14: float | None = None,
-                   range_pos_htf: float | None = None) -> tuple[Decision, str]:
+                   range_pos_htf: float | None = None,
+                   htf_trend: str | None = None,
+                   require_htf_alignment: bool = False) -> tuple[Decision, str]:
     """Returns (decision, skip_reason). skip_reason '' means actionable."""
     obj = extract_json(raw_text)
     if obj is None:
@@ -86,6 +88,11 @@ def parse_decision(raw_text: str, symbol: str, last_price: float,
             return d, f"htf_range_high_{range_pos_htf}"
         if d.action == "SELL" and range_pos_htf < 15:
             return d, f"htf_range_low_{range_pos_htf}"
+    if require_htf_alignment and htf_trend and htf_trend != "UNKNOWN":
+        if d.action == "BUY" and htf_trend != "BULLISH":
+            return d, f"counter_htf_trend_{htf_trend}"
+        if d.action == "SELL" and htf_trend != "BEARISH":
+            return d, f"counter_htf_trend_{htf_trend}"
 
     # Directional trade: enforce SL/TP geometry + clamp risk
     if d.sl_price is None or d.tp_price is None:

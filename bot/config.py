@@ -36,6 +36,7 @@ class SymbolCfg(BaseModel):
     symbol: str
     yahoo: str
     spread: float | None = None   # typical spread in price units (fallback when provider has none)
+    htf_alignment_only: bool = False  # require trade direction to match HTF trend
 
 
 class DataConfig(BaseModel):
@@ -86,6 +87,10 @@ class Config(BaseModel):
         if sc and sc.spread is not None:
             return sc.spread
         return self.default_spreads.get(symbol.upper(), 0.0)
+
+    def requires_htf_alignment(self, symbol: str) -> bool:
+        sc = next((s for s in self.symbols if s.symbol.upper() == symbol.upper()), None)
+        return bool(sc and sc.htf_alignment_only)
 
     @property
     def api_key(self) -> str:

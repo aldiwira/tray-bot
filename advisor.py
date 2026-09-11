@@ -153,7 +153,9 @@ def main() -> None:
         min_confidence=cfg.llm.min_confidence,
         min_rr_ratio=cfg.risk.min_rr_ratio,
         rsi14=snapshot.get("rsi14"),
-        range_pos_htf=snapshot.get("range_pos_htf")
+        range_pos_htf=snapshot.get("range_pos_htf"),
+        htf_trend=snapshot.get("htf_trend"),
+        require_htf_alignment=cfg.requires_htf_alignment(symbol_clean)
     )
 
     format_advisor_output(symbol_clean, snapshot, raw_llm, decision, skip, equity)

@@ -16,6 +16,7 @@ symbols:
     yahoo: "AUDUSD=X"
   - symbol: XAUUSD
     yahoo: "GC=F"        # gold futures proxy; XAUUSD=X exists but is thin on Yahoo
+    htf_alignment_only: true  # block counter-trend shorts in macro bull runs
 
 data:
   provider: yahoo

@@ -120,6 +120,32 @@ def test_parse_no_veto_without_htf_context():
     assert skip == ""
 
 
+def test_parse_htf_alignment_veto_when_flagged():
+    # SELL attempted while HTF is BULLISH -> blocked
+    d, skip = parse_decision(
+        '{"action":"SELL","symbol":"XAUUSD","confidence":0.85,'
+        '"sl_price":4500.0,"tp_price":4400.0,"risk_pct":0.75}',
+        "XAUUSD", last_price=4450.0, atr=15.0, spread=0.30,
+        htf_trend="BULLISH", require_htf_alignment=True)
+    assert skip == "counter_htf_trend_BULLISH"
+
+    # SELL permitted when HTF is BEARISH
+    d, skip = parse_decision(
+        '{"action":"SELL","symbol":"XAUUSD","confidence":0.85,'
+        '"sl_price":4500.0,"tp_price":4400.0,"risk_pct":0.75}',
+        "XAUUSD", last_price=4450.0, atr=15.0, spread=0.30,
+        htf_trend="BEARISH", require_htf_alignment=True)
+    assert skip == ""
+
+    # When require_htf_alignment=False (default for FX majors), opposite HTF is allowed
+    d, skip = parse_decision(
+        '{"action":"SELL","symbol":"EURUSD","confidence":0.85,'
+        '"sl_price":1.0900,"tp_price":1.0790,"risk_pct":0.75}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0001,
+        htf_trend="BULLISH", require_htf_alignment=False)
+    assert skip == ""
+
+
 def test_lot_math():
     # 10000 * 0.75% = 75 USD risk; 50 pip SL -> 75 / (50*10) = 0.15 lot
     assert compute_lot(10000, 0.75, 0.0050) == 0.15
