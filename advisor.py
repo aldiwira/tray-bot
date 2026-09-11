@@ -16,9 +16,12 @@ import sys
 from datetime import datetime, timezone
 
 from bot.ai_client import get_decision
+from bot.backtest import run_backtest
 from bot.config import load_config
 from bot.decision_parser import parse_decision
+from bot.journal import append_entry
 from bot.market_data import build_snapshot
+from bot.prompt import PROMPT_VERSION
 from bot.risk import compute_lot
 
 
@@ -107,6 +110,10 @@ def main() -> None:
     parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
     parser.add_argument("--equity", type=float, default=None, help="Custom equity balance in USD (default from config)")
     parser.add_argument("--risk", type=float, default=None, help="Risk percentage per trade (default from config)")
+    parser.add_argument("--backtest", action="store_true",
+                        help="Run a historical backtest for this symbol instead of a live advisory")
+    parser.add_argument("--days", type=int, default=5, help="Backtest: days of history to replay (default 5)")
+    parser.add_argument("--limit", type=int, default=20, help="Backtest: max LLM calls (default 20)")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -115,6 +122,11 @@ def main() -> None:
         cfg.risk.risk_pct = args.risk
 
     symbol_clean = args.symbol.upper().replace("/", "").replace("-", "")
+
+    if args.backtest:
+        result = run_backtest(cfg, [symbol_clean], args.days, args.limit)
+        sys.exit(0 if result["fills"] else 1)
+
     yahoo_ticker = resolve_yahoo_ticker(symbol_clean, cfg)
 
     print(f"Fetching market data for {symbol_clean} ({yahoo_ticker})...")
@@ -145,6 +157,20 @@ def main() -> None:
     )
 
     format_advisor_output(symbol_clean, snapshot, raw_llm, decision, skip, equity)
+
+    # journal the advisory so analyzer/backtest stats include manual sessions
+    append_entry(cfg.journal.path, {
+        "symbol": symbol_clean,
+        "last_close": snapshot["last_close"],
+        "raw_llm": raw_llm,
+        "decision": decision.model_dump(),
+        "skip_reason": skip,
+        "simulated_lot": compute_lot(equity, decision.risk_pct or 0.75,
+                                     abs(snapshot["last_close"] - (decision.sl_price or 0)))
+        if decision.action in ("BUY", "SELL") and decision.sl_price else 0.0,
+        "dry_run": cfg.trading.dry_run,
+        "prompt_version": PROMPT_VERSION,
+    })
 
 
 if __name__ == "__main__":
