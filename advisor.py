@@ -136,10 +136,12 @@ def main() -> None:
         symbol_clean,
         snapshot["last_close"],
         snapshot["atr14"],
-        spread=snapshot["spread"] or 0.0,
+        spread=snapshot["spread"] if snapshot["spread"] is not None else cfg.spread_for(symbol_clean),
         max_risk_pct=cfg.risk.max_risk_pct_allowed,
         min_confidence=cfg.llm.min_confidence,
-        min_rr_ratio=cfg.risk.min_rr_ratio
+        min_rr_ratio=cfg.risk.min_rr_ratio,
+        rsi14=snapshot.get("rsi14"),
+        range_pos_htf=snapshot.get("range_pos_htf")
     )
 
     format_advisor_output(symbol_clean, snapshot, raw_llm, decision, skip, equity)

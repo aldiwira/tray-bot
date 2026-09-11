@@ -35,6 +35,7 @@ class LlmConfig(BaseModel):
 class SymbolCfg(BaseModel):
     symbol: str
     yahoo: str
+    spread: float | None = None   # typical spread in price units (fallback when provider has none)
 
 
 class DataConfig(BaseModel):
@@ -77,6 +78,14 @@ class Config(BaseModel):
     risk: RiskConfig
     trading: TradingConfig
     journal: JournalConfig
+    default_spreads: dict[str, float] = Field(default_factory=dict)
+
+    def spread_for(self, symbol: str) -> float:
+        """Fallback spread (price units) when the provider reports none."""
+        sc = next((s for s in self.symbols if s.symbol.upper() == symbol.upper()), None)
+        if sc and sc.spread is not None:
+            return sc.spread
+        return self.default_spreads.get(symbol.upper(), 0.0)
 
     @property
     def api_key(self) -> str:

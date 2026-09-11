@@ -23,6 +23,14 @@ data:
   bars: 100
   period: 14d
 
+# typical spreads (price units) used when the provider reports none
+default_spreads:
+  EURUSD: 0.00010
+  GBPUSD: 0.00015
+  AUDUSD: 0.00015
+  USDJPY: 0.015
+  XAUUSD: 0.30
+
 risk:
   equity_simulated: 10000.0     # phase 1: simulated account for lot math
   risk_pct: 0.75                # percent of equity per trade (clamped 0.25-1.0)

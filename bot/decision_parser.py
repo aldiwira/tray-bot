@@ -51,7 +51,9 @@ def parse_decision(raw_text: str, symbol: str, last_price: float,
                    atr: float, spread: float,
                    max_risk_pct: float = 1.0,
                    min_confidence: float = 0.55,
-                   min_rr_ratio: float = 1.0) -> tuple[Decision, str]:
+                   min_rr_ratio: float = 1.0,
+                   rsi14: float | None = None,
+                   range_pos_htf: float | None = None) -> tuple[Decision, str]:
     """Returns (decision, skip_reason). skip_reason '' means actionable."""
     obj = extract_json(raw_text)
     if obj is None:
@@ -72,6 +74,18 @@ def parse_decision(raw_text: str, symbol: str, last_price: float,
         return d, ""
     if d.confidence < min_confidence:
         return d, f"confidence {d.confidence:.2f} < {min_confidence}"
+
+    # Enforced strategy rules (prompt prose is advisory; these are hard gates)
+    if rsi14 is not None:
+        if d.action == "BUY" and rsi14 > 70:
+            return d, f"rsi_overbought_{rsi14}"
+        if d.action == "SELL" and rsi14 < 30:
+            return d, f"rsi_oversold_{rsi14}"
+    if range_pos_htf is not None:
+        if d.action == "BUY" and range_pos_htf > 85:
+            return d, f"htf_range_high_{range_pos_htf}"
+        if d.action == "SELL" and range_pos_htf < 15:
+            return d, f"htf_range_low_{range_pos_htf}"
 
     # Directional trade: enforce SL/TP geometry + clamp risk
     if d.sl_price is None or d.tp_price is None:

@@ -80,6 +80,46 @@ def test_parse_no_trade_is_clean():
     assert d.action == "NO_TRADE"
 
 
+def test_parse_buy_vetoed_when_rsi_overbought():
+    d, skip = parse_decision(
+        '{"action":"BUY","symbol":"EURUSD","confidence":0.9,'
+        '"sl_price":1.0800,"tp_price":1.0900,"risk_pct":0.5}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0002,
+        rsi14=75.0)
+    assert skip == "rsi_overbought_75.0"
+    assert d.action == "BUY"  # decision preserved, execution gated
+
+def test_parse_sell_vetoed_when_rsi_oversold():
+    d, skip = parse_decision(
+        '{"action":"SELL","symbol":"EURUSD","confidence":0.9,'
+        '"sl_price":1.0900,"tp_price":1.0800,"risk_pct":0.5}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0002,
+        rsi14=25.0)
+    assert skip == "rsi_oversold_25.0"
+
+def test_parse_htf_range_extremes_vetoed():
+    d, skip = parse_decision(
+        '{"action":"BUY","symbol":"EURUSD","confidence":0.9,'
+        '"sl_price":1.0800,"tp_price":1.0900,"risk_pct":0.5}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0002,
+        range_pos_htf=90.0)
+    assert skip == "htf_range_high_90.0"
+    d, skip = parse_decision(
+        '{"action":"SELL","symbol":"EURUSD","confidence":0.9,'
+        '"sl_price":1.0900,"tp_price":1.0800,"risk_pct":0.5}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0002,
+        range_pos_htf=10.0)
+    assert skip == "htf_range_low_10.0"
+
+def test_parse_no_veto_without_htf_context():
+    # rsi/htf args omitted (None) -> old behavior, veto skipped
+    d, skip = parse_decision(
+        '{"action":"BUY","symbol":"EURUSD","confidence":0.8,'
+        '"sl_price":1.0800,"tp_price":1.0900,"risk_pct":0.8,"reason":"breakout"}',
+        "EURUSD", last_price=1.0850, atr=0.0015, spread=0.0002)
+    assert skip == ""
+
+
 def test_lot_math():
     # 10000 * 0.75% = 75 USD risk; 50 pip SL -> 75 / (50*10) = 0.15 lot
     assert compute_lot(10000, 0.75, 0.0050) == 0.15
@@ -88,3 +128,17 @@ def test_lot_math():
 def test_daily_loss_cap():
     assert daily_loss_allowed(10000, 9800, 3.0) is True    # 2% loss
     assert daily_loss_allowed(10000, 9700, 3.0) is False   # 3% loss
+
+def test_spread_fallback():
+    from bot.config import Config, DataConfig, JournalConfig, LlmConfig, RiskConfig, SymbolCfg, TradingConfig
+    cfg = Config(
+        llm=LlmConfig(), data=DataConfig(), risk=RiskConfig(),
+        trading=TradingConfig(), journal=JournalConfig(),
+        symbols=[SymbolCfg(symbol="EURUSD", yahoo="EURUSD=X", spread=0.00012)],
+        default_spreads={"GBPUSD": 0.00015})
+    # per-symbol override wins
+    assert cfg.spread_for("EURUSD") == 0.00012
+    # falls back to default_spreads map
+    assert cfg.spread_for("GBPUSD") == 0.00015
+    # unknown symbol -> 0.0 (old behavior)
+    assert cfg.spread_for("NZDUSD") == 0.0

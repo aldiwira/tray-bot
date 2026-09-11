@@ -48,8 +48,37 @@ def analyze(journal_path: str, symbol: str | None = None,
     print(f"top NO_TRADE reasons:")
     for r, n in reasons.most_common(5):
         print(f"  {n:4d}  {r}")
+
+    # Confidence-calibration: does higher LLM confidence actually win more?
+    buckets: dict[str, list[str]] = {}
+    for e in entries:
+        fill = e.get("fill") or (e.get("backtest", {}) or {}).get("fill")
+        if not fill:
+            continue
+        outcome = fill.get("outcome")
+        if outcome not in ("WIN", "LOSS"):
+            continue
+        conf = e["decision"]["confidence"]
+        bucket = "0.55-0.65" if conf < 0.65 else ("0.65-0.75" if conf < 0.75 else "0.75+")
+        buckets.setdefault(bucket, []).append(outcome)
+    if buckets:
+        print("\nconfidence calibration (journaled fills):")
+        for b in ("0.55-0.65", "0.65-0.75", "0.75+"):
+            outs = buckets.get(b)
+            if outs:
+                wr = outs.count("WIN") / len(outs) * 100
+                print(f"  {b}: {len(outs)} fills, win rate {wr:.0f}%")
+        total = [o for outs in buckets.values() for o in outs]
+        print(f"  overall: {len(total)} fills, "
+              f"win rate {total.count('WIN') / len(total) * 100:.0f}%")
+    else:
+        print("\nconfidence calibration: no journaled fill outcomes yet "
+              "(run --loop / backtest to accumulate)")
+
     return {"entries": len(entries), "actions": dict(actions),
-            "skips": dict(skips), "avg_confidence": round(avg_conf, 3)}
+            "skips": dict(skips), "avg_confidence": round(avg_conf, 3),
+            "calibration": {k: {"fills": len(v), "wins": v.count("WIN")}
+                            for k, v in buckets.items()}}
 
 
 if __name__ == "__main__":
