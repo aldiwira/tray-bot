@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import datetime, timezone
 
@@ -103,6 +104,79 @@ def format_advisor_output(symbol: str, snapshot: dict, raw_llm: str,
     print("\n" + "=" * 65 + "\n")
 
 
+def _pip_size(symbol: str) -> float:
+    """PIP size: 0.01 for JPY pairs, 0.0001 for standard FX."""
+    return 0.01 if "JPY" in symbol.upper() else 0.0001
+
+
+def _trade_details(symbol: str, snapshot: dict, decision, skip: str, equity: float) -> dict:
+    """Compute pip distances, R:R, lot, and dollar risk."""
+    pip_size = _pip_size(symbol)
+    last_price = snapshot["last_close"]
+    out: dict = {"pip_size": pip_size}
+    if decision.action in ("BUY", "SELL") and decision.sl_price and decision.tp_price:
+        sl = decision.sl_price
+        tp = decision.tp_price
+        sl_dist = abs(last_price - sl)
+        tp_dist = abs(tp - last_price)
+        out.update({
+            "entry_price": last_price,
+            "stop_loss": sl,
+            "take_profit": tp,
+            "sl_pips": round(sl_dist / pip_size, 1),
+            "tp_pips": round(tp_dist / pip_size, 1),
+            "risk_reward_ratio": round(tp_dist / sl_dist, 2) if sl_dist > 0 else 0.0,
+            "lot_size": compute_lot(equity, decision.risk_pct or 0.75, sl_dist),
+            "risk_dollars": round(equity * ((decision.risk_pct or 0.75) / 100.0), 2),
+        })
+    return out
+
+
+def _emit_json(symbol: str, snapshot: dict, raw_llm: str,
+               decision, skip: str, equity: float) -> None:
+    """Print a machine-readable JSON advisory to stdout."""
+    payload = {
+        "symbol": symbol.upper(),
+        "last_price": snapshot["last_close"],
+        "market_session": snapshot["session"],
+        "indicators": {
+            "trend": snapshot.get("trend"),
+            "ema20": snapshot.get("ema20"),
+            "ema50": snapshot.get("ema50"),
+            "rsi14": snapshot.get("rsi14"),
+            "atr14": snapshot.get("atr14"),
+            "day_open": snapshot.get("day_open"),
+            "htf_trend": snapshot.get("htf_trend"),
+        },
+        "decision": decision.model_dump(),
+        "skip_reason": skip,
+        "equity": equity,
+        "trade": _trade_details(symbol, snapshot, decision, skip, equity),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    print(json.dumps(payload))
+
+
+def _journal_if_json(cfg, symbol: str, snapshot: dict, raw_llm: str,
+                     decision, skip: str, equity: float) -> None:
+    """Same journaling as interactive mode, so --json doesn't break the journal."""
+    append_entry(cfg.journal.path, {
+        "symbol": symbol,
+        "last_close": snapshot["last_close"],
+        "raw_llm": raw_llm,
+        "decision": decision.model_dump(),
+        "skip_reason": skip,
+        "simulated_lot": _trade_details(symbol, snapshot, decision, skip, equity).get("lot_size", 0.0),
+        "dry_run": cfg.trading.dry_run,
+        "prompt_version": PROMPT_VERSION,
+    })
+
+
+def _log(msg: str, is_json: bool) -> None:
+    if not is_json:
+        print(msg, file=sys.stderr)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="AI Forex Advisor — On-demand AI trade recommendation with entry, SL, TP, and timing."
@@ -117,6 +191,8 @@ def main() -> None:
                         help="Market data provider: 'yahoo' or 'mt5' (default from config)")
     parser.add_argument("--days", type=int, default=5, help="Backtest: days of history to replay (default 5)")
     parser.add_argument("--limit", type=int, default=20, help="Backtest: max LLM calls (default 20)")
+    parser.add_argument("--json", action="store_true",
+                        help="Emit machine-readable JSON instead of formatted console output")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -136,7 +212,7 @@ def main() -> None:
         acc = get_mt5_account(bridge_url)
         if acc and not args.equity:
             equity = float(acc.get("equity", equity))
-        print(f"Fetching live market data for {symbol_clean} from MetaTrader 5 ({bridge_url})...")
+        _log(f"Fetching live market data for {symbol_clean} from MetaTrader 5 ({bridge_url})...", args.json)
         snapshot = build_mt5_snapshot(symbol_clean, cfg)
         if snapshot is None:
             print(f"Error: Unable to fetch market data for {symbol_clean} via MT5 bridge ({bridge_url}).", file=sys.stderr)
@@ -144,14 +220,14 @@ def main() -> None:
             sys.exit(1)
     else:
         yahoo_ticker = resolve_yahoo_ticker(symbol_clean, cfg)
-        print(f"Fetching market data for {symbol_clean} ({yahoo_ticker})...")
+        _log(f"Fetching market data for {symbol_clean} ({yahoo_ticker})...", args.json)
         snapshot = build_snapshot(symbol_clean, yahoo_ticker, cfg)
         if snapshot is None:
             print(f"Error: Unable to fetch market data for {symbol_clean} via Yahoo ({yahoo_ticker}).", file=sys.stderr)
             print("Tip: Make sure the ticker exists on Yahoo Finance (e.g. EURUSD=X, GBPJPY=X).", file=sys.stderr)
             sys.exit(1)
 
-    print(f"Requesting AI analysis from model '{cfg.llm.model}' at {cfg.llm.base_url}...")
+    _log(f"Requesting AI analysis from model '{cfg.llm.model}' at {cfg.llm.base_url}...", args.json)
     try:
         raw_llm = get_decision(cfg, snapshot)
     except Exception as e:
@@ -174,7 +250,11 @@ def main() -> None:
         auto_clamp_sl_tp=cfg.risk.auto_clamp_sl_tp
     )
 
-    format_advisor_output(symbol_clean, snapshot, raw_llm, decision, skip, equity)
+    if args.json:
+        _emit_json(symbol_clean, snapshot, raw_llm, decision, skip, equity)
+        _journal_if_json(cfg, symbol_clean, snapshot, raw_llm, decision, skip, equity)
+    else:
+        format_advisor_output(symbol_clean, snapshot, raw_llm, decision, skip, equity)
 
     # journal the advisory so analyzer/backtest stats include manual sessions
     append_entry(cfg.journal.path, {

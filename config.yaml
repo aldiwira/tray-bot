@@ -45,7 +45,7 @@ risk:
 trading:
   dry_run: true                 # phase 1: always true (no broker wired)
   one_position_per_symbol: true
-  mt5_bridge_url: "http://localhost:5001"
+  mt5_bridge_url: "http://192.168.122.169:8001"
   sessions:                     # UTC hours the bot is allowed to consider trades
     - {name: london, start: 7, end: 16}
     - {name: ny, start: 12, end: 21}
